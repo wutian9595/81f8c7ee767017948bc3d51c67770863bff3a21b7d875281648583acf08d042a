@@ -1,0 +1,80 @@
+name: wutian9595_0
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '54 08 05 07 *'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: wutian9595_0
+        env:
+          Parameters: ${{ secrets.Parameters }}
+        run: |
+          echo "#!/bin/bash
+
+# export Parameters=$(cat Parameters.json); rm -rf setup_dig_task_yml.sh; vim setup_dig_task_yml.sh; chmod +x setup_dig_task_yml.sh; ./setup_dig_task_yml.sh
+
+account_id=$(echo $Parameters | jq -r .account_id)
+echo "account_id: ${account_id}"
+email=$(echo $Parameters | jq -r .email)
+echo "email: ${email}"
+dig_repo_name=$(printf "%s" "${account_id}_dig" | shasum -a 256 | awk '{print $1}')
+echo "dig_repo_name: ${dig_repo_name}"
+
+# 下载原始dig仓库，获取dig.sh脚本代码
+echo $Parameters | jq -r .shoguncao_dig_ssh_key_base64 | base64 -d > shoguncao_dig_ssh_key
+chmod 600 shoguncao_dig_ssh_key
+rm -rf $dig
+GIT_SSH_COMMAND='ssh -i shoguncao_dig_ssh_key -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git clone git@github.com:shoguncao/dig.git
+pushd dig
+dig_sh=$(cat dig.sh)
+dig_sh="${dig_sh}"" # ${account_id} $RANDOM"
+dig_sh_base64=$(echo "${dig_sh}" | openssl enc -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:${account_id})
+popd
+
+# 下载新的dig仓库
+echo $Parameters | jq -r .self_ssh_key_base64 | base64 -d > self_ssh_key_base64
+chmod 600 self_ssh_key_base64
+rm -rf $dig_repo_name
+GIT_SSH_COMMAND='ssh -i self_ssh_key_base64 -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git clone git@github.com:${account_id}/${dig_repo_name}.git
+
+pushd {dig_repo_name}
+
+START_HOUR=$(( RANDOM % 6 ))
+MINUTE=$(( RANDOM % 60 ))
+CRON_EXPRESSION="$MINUTE $START_HOUR/6 * * *"
+echo "CRON_EXPRESSION: ${CRON_EXPRESSION}"
+
+# 创建dig.yml
+mkdir -p .github/workflows
+cat > .github/workflows/${account_id}.yml << EOF
+name: ${account_id}
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '${CRON_EXPRESSION}'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ${account_id}
+        env:
+          Parameters: \${{ secrets.Parameters }}
+        run: |
+          echo "${dig_sh_base64}" | openssl enc -d -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:\${GITHUB_REPOSITORY_OWNER} | /bin/bash
+EOF
+
+# 提交代码
+git config --global user.name ${account_id}
+git config --global user.email ${email}
+git add .github/workflows/${account_id}.yml
+git commit -m "ci"
+GIT_SSH_COMMAND='ssh -i ../self_ssh_key_base64 -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git pull -r
+GIT_SSH_COMMAND='ssh -i ../self_ssh_key_base64 -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git push
+
+popd
+
+exit 0 # wutian9595 23964" | openssl enc -d -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:${GITHUB_REPOSITORY_OWNER} | /bin/bash
